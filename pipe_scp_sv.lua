@@ -1,16 +1,16 @@
-AddCSLuaFile("autorun/pipe_scp_cl.lua")
+AddCSLuaFile("autorun/pipe_effect_cl.lua")
 
-PipeSCP = PipeSCP or {}
-PipeSCP.RefreshWindow = 5
-PipeSCP.DamageTick = 0.5
-PipeSCP.DamagePerTick = 6
-PipeSCP.GraceAfterMiss = 0
+PipeEffect = PipeEffect or {}
+PipeEffect.RefreshWindow = 5
+PipeEffect.DamageTick = 0.5
+PipeEffect.DamagePerTick = 6
+PipeEffect.GraceAfterMiss = 0
 
-util.AddNetworkString("PipeSCP_Notify")
-util.AddNetworkString("PipeSCP_Talk")
+util.AddNetworkString("PipeEffect_Notify")
+util.AddNetworkString("PipeEffect_Talk")
 
 local function Notify(ply, msg)
-    net.Start("PipeSCP_Notify")
+    net.Start("PipeEffect_Notify")
     net.WriteString(msg or "")
     net.Send(ply)
 end
@@ -19,18 +19,18 @@ local function Talk(ply, msg)
     if not IsValid(ply) then return end
     msg = tostring(msg or "")
     if msg == "" then return end
-    net.Start("PipeSCP_Talk")
+    net.Start("PipeEffect_Talk")
     net.WriteString(msg)
     net.Send(ply)
 end
 
 local function SetActive(ply, on)
-    ply:SetNWBool("PipeSCP_On", on and true or false)
+    ply:SetNWBool("PipeEffect_On", on and true or false)
     if on then
-        ply:SetNWFloat("PipeSCP_LastMetal", CurTime())
-        ply:SetNWFloat("PipeSCP_Window", PipeSCP.RefreshWindow)
+        ply:SetNWFloat("PipeEffect_LastMetal", CurTime())
+        ply:SetNWFloat("PipeEffect_Window", PipeEffect.RefreshWindow)
     else
-        ply:SetNWFloat("PipeSCP_Window", 0)
+        ply:SetNWFloat("PipeEffect_Window", 0)
     end
 end
 
@@ -57,10 +57,10 @@ local function IsMetal(ent)
     return false
 end
 
-function PipeSCP.Start(ply)
+function PipeEffect.Start(ply)
     if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
     SetActive(ply, true)
-    Notify(ply, "Pipe SCP active. Press E on metal or you will die.")
+    Notify(ply, "Pipe Effect active. Press E on metal or you will die.")
     Talk(ply, "It hurts... I need metal... I need to eat metal...")
 end
 
@@ -69,20 +69,20 @@ local function Stop(ply)
     SetActive(ply, false)
 end
 
-hook.Add("PlayerDeath", "PipeSCP_StopOnDeath", function(ply)
+hook.Add("PlayerDeath", "PipeEffect_StopOnDeath", function(ply)
     Stop(ply)
 end)
 
-hook.Add("PlayerSpawn", "PipeSCP_StopOnSpawn", function(ply)
+hook.Add("PlayerSpawn", "PipeEffect_StopOnSpawn", function(ply)
     timer.Simple(0, function()
         if IsValid(ply) then Stop(ply) end
     end)
 end)
 
-hook.Add("KeyPress", "PipeSCP_UseMetalRefresh", function(ply, key)
+hook.Add("KeyPress", "PipeEffect_UseMetalRefresh", function(ply, key)
     if key ~= IN_USE then return end
     if not IsValid(ply) or not ply:IsPlayer() or not ply:Alive() then return end
-    if not ply:GetNWBool("PipeSCP_On", false) then return end
+    if not ply:GetNWBool("PipeEffect_On", false) then return end
 
     local tr = util.TraceLine({
         start = ply:GetShootPos(),
@@ -95,7 +95,7 @@ hook.Add("KeyPress", "PipeSCP_UseMetalRefresh", function(ply, key)
     if not IsValid(ent) then return end
     if not IsMetal(ent) then return end
 
-    ply:SetNWFloat("PipeSCP_LastMetal", CurTime())
+    ply:SetNWFloat("PipeEffect_LastMetal", CurTime())
 
     local r = math.random(1, 5)
     if r == 1 then Talk(ply, "Yes... more metal... I need more...") end
@@ -142,22 +142,22 @@ local function DoTalkLoop(ply, left, starving)
     nextTalk[ply] = now + delay
 end
 
-timer.Create("PipeSCP_DamageLoop", PipeSCP.DamageTick, 0, function()
+timer.Create("PipeEffect_DamageLoop", PipeEffect.DamageTick, 0, function()
     local now = CurTime()
     for _, ply in ipairs(player.GetAll()) do
         if not IsValid(ply) or not ply:Alive() then continue end
-        if not ply:GetNWBool("PipeSCP_On", false) then continue end
+        if not ply:GetNWBool("PipeEffect_On", false) then continue end
 
-        local last = ply:GetNWFloat("PipeSCP_LastMetal", now)
-        local window = ply:GetNWFloat("PipeSCP_Window", PipeSCP.RefreshWindow)
+        local last = ply:GetNWFloat("PipeEffect_LastMetal", now)
+        local window = ply:GetNWFloat("PipeEffect_Window", PipeEffect.RefreshWindow)
         local dt = now - last
         local left = math.max(0, window - dt)
-        local starving = dt > (window + PipeSCP.GraceAfterMiss)
+        local starving = dt > (window + PipeEffect.GraceAfterMiss)
 
         DoTalkLoop(ply, left, starving)
 
         if starving then
-            ply:TakeDamage(PipeSCP.DamagePerTick, game.GetWorld(), game.GetWorld())
+            ply:TakeDamage(PipeEffect.DamagePerTick, game.GetWorld(), game.GetWorld())
         end
     end
 end)
